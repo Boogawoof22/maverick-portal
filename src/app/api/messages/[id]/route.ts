@@ -1,0 +1,11 @@
+import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+
+export async function PATCH(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const message = await prisma.message.update({
+    where: { id },
+    data: { read: true },
+  });
+  return NextResponse.json(message);
+}

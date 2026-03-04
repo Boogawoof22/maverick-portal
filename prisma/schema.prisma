@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String
+  role          String    @default("player") // "coach", "player", "admin"
+  position      String?   // "QB", "RB", "WR", "OL", "DL", "LB", "CB", "SS", "FS", "ROV", etc.
+  jerseyNumber  Int?
+  avatar        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  quizAttempts  QuizAttempt[]
+  flashcards    Flashcard[]
+  assignments   Assignment[]    @relation("PlayerAssignments")
+  assignedBy    Assignment[]    @relation("CoachAssignments")
+  messages      Message[]       @relation("SentMessages")
+  received      Message[]       @relation("ReceivedMessages")
+}
+
+model Video {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  url         String   // file path or external URL
+  thumbnail   String?
+  category    String   // "game_film", "scout_film", "drill", "highlight", "tutorial"
+  tags        String?  // comma-separated: "tackling,defense,LB"
+  position    String?  // position-specific content
+  uploadedBy  String?
+  createdAt   DateTime @default(now())
+}
+
+model Playbook {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  fileUrl     String   // PDF or image path
+  category    String   // "defense", "offense", "special_teams"
+  section     String?  // "coverages", "blitzes", "formations"
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model Quiz {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  category    String   // "defense", "offense", "special_teams", "general"
+  position    String?  // target position (null = all)
+  difficulty  String   @default("medium") // "easy", "medium", "hard"
+  createdBy   String
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  
+  questions   Question[]
+  attempts    QuizAttempt[]
+}
+
+model Question {
+  id          String   @id @default(cuid())
+  quizId      String
+  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  type        String   // "multiple_choice", "diagram", "coverage_id", "formation_id"
+  text        String
+  imageUrl    String?  // for diagram-based questions
+  options     String   // JSON array of options
+  correctAnswer String // correct answer(s)
+  explanation String?  // shown after answering
+  sortOrder   Int      @default(0)
+}
+
+model QuizAttempt {
+  id          String   @id @default(cuid())
+  quizId      String
+  quiz        Quiz     @relation(fields: [quizId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  score       Int
+  totalQuestions Int
+  answers     String   // JSON of answers given
+  completedAt DateTime @default(now())
+}
+
+model Flashcard {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  front       String   // question/term
+  back        String   // answer/definition
+  imageUrl    String?  // optional diagram
+  category    String?
+  mastered    Boolean  @default(false)
+  lastReviewed DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model Assignment {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  type        String   // "playbook_review", "quiz", "video_watch", "drill"
+  resourceId  String?  // links to quiz/playbook/video id
+  playerId    String
+  player      User     @relation("PlayerAssignments", fields: [playerId], references: [id])
+  coachId     String
+  coach       User     @relation("CoachAssignments", fields: [coachId], references: [id])
+  dueDate     DateTime?
+  completed   Boolean  @default(false)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  senderId    String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId  String
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  content     String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model DrillLibrary {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  instructions String  // step-by-step
+  videoUrl    String?
+  category    String   // "tackling", "footwork", "agility", "conditioning", etc.
+  position    String?  // position-specific or null for all
+  equipment   String?  // "cones", "ladder", "none", etc.
+  atHome      Boolean  @default(false) // can be done at home
+  difficulty  String   @default("medium")
+  createdAt   DateTime @default(now())
+}
